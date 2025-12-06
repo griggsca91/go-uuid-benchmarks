@@ -1,7 +1,6 @@
 package main
 
 import (
-	"math/rand/v2"
 	"testing"
 
 	"github.com/google/uuid"
@@ -43,15 +42,6 @@ func BenchmarkNewUUIDParallelWithRandPool(b *testing.B) {
 	})
 }
 
-type plainRander struct{}
-
-func (plainRander) Read(b []byte) (int, error) {
-	for i := range b {
-		b[i] = byte(rand.Uint())
-	}
-	return len(b), nil
-}
-
 func BenchmarkNewUUIDWithNewRand(b *testing.B) {
 	uuid.SetRand(plainRander{})
 	for b.Loop() {
@@ -61,6 +51,44 @@ func BenchmarkNewUUIDWithNewRand(b *testing.B) {
 
 func BenchmarkNewUUIDParallelWithNewRand(b *testing.B) {
 	uuid.SetRand(plainRander{})
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			sink := uuid.New()
+			_ = sink
+		}
+	})
+}
+
+func BenchmarkNewUUIDWithNew16BytesRand(b *testing.B) {
+	uuid.SetRand(sixteenBytesRander{})
+	for b.Loop() {
+		sink = uuid.New()
+	}
+}
+
+func BenchmarkNewUUIDParallelWithNew16BytesRand(b *testing.B) {
+	uuid.SetRand(sixteenBytesRander{})
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			sink := uuid.New()
+			_ = sink
+		}
+	})
+}
+
+func BenchmarkNewUUIDWithNewRandWithRandPool(b *testing.B) {
+	uuid.SetRand(plainRander{})
+	uuid.EnableRandPool()
+	defer uuid.DisableRandPool()
+	for b.Loop() {
+		sink = uuid.New()
+	}
+}
+
+func BenchmarkNewUUIDParallelWithNewRandWithRandPool(b *testing.B) {
+	uuid.SetRand(plainRander{})
+	uuid.EnableRandPool()
+	defer uuid.DisableRandPool()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
 			sink := uuid.New()
